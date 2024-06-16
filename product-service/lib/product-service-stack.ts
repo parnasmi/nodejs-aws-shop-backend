@@ -12,13 +12,13 @@ export class ProductServiceStack extends cdk.Stack {
     const getProductsListLambda = new lambda.Function(this, 'GetProductsListHandler', {
       runtime: lambda.Runtime.NODEJS_18_X,
       handler: 'getProductsList.handler',
-      code: lambda.Code.fromAsset(path.join(__dirname, '../lambda'))
+      code: lambda.Code.fromAsset(path.join(__dirname, '../dist/lambda'))
     });
 
     const getProductByIdLambda = new lambda.Function(this, 'GetProductByIdHandler', {
       runtime: lambda.Runtime.NODEJS_18_X,
       handler: 'getProductById.handler',
-      code: lambda.Code.fromAsset(path.join(__dirname, '../lambda'))
+      code: lambda.Code.fromAsset(path.join(__dirname, '../dist/lambda'))
     });
 
     //Create the API Gateway
