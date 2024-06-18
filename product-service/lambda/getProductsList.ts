@@ -1,15 +1,20 @@
 import { APIGatewayProxyHandler } from "aws-lambda/trigger/api-gateway-proxy";
-import { products } from "./products";
+import { HEADERS, getAllProducts } from "./products";
 
 export const handler: APIGatewayProxyHandler = async (event) => {
+    const products = getAllProducts();
+
+    if(!products.length) {
+      return {
+        statusCode: 404,
+        headers: HEADERS,
+        body: JSON.stringify({message: 'Products not found'})
+      }
+    }
+  
     return {
       statusCode: 200,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Content-Type": "application/json",
-      },
+      headers: HEADERS,
       body: JSON.stringify(products),
     };
   };
