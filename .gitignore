@@ -13,6 +13,7 @@ coverage
 dist
 dist-ssr
 *.local
+product-service/node_modules
 
 # Editor directories and files
 .vscode/*
