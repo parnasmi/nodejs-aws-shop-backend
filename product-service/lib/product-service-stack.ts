@@ -2,24 +2,51 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as path from 'path';
 
 export class ProductServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
+    // Create DynamoDB tables
+    const productsTable = new dynamodb.Table(this, 'ProductsTable',{
+      partitionKey: {name: 'id', type: dynamodb.AttributeType.STRING},
+      removalPolicy:cdk.RemovalPolicy.DESTROY
+    });
+
+    const stocksTable = new dynamodb.Table(this, 'StocksTable', {
+      partitionKey: {name: 'product_id', type: dynamodb.AttributeType.STRING},
+      removalPolicy:cdk.RemovalPolicy.DESTROY
+    });
+
     // Create the Lambda functions
     const getProductsListLambda = new lambda.Function(this, 'GetProductsListHandler', {
       runtime: lambda.Runtime.NODEJS_18_X,
       handler: 'getProductsList.handler',
-      code: lambda.Code.fromAsset(path.join(__dirname, '../dist/lambda'))
+      code: lambda.Code.fromAsset(path.join(__dirname, '../dist/lambda')),
+      environment: {
+        PRODUCTS_TABLE_NAME:productsTable.tableName,
+        STOCKS_TABLE_NAME:stocksTable.tableName
+      }
     });
 
     const getProductByIdLambda = new lambda.Function(this, 'GetProductByIdHandler', {
       runtime: lambda.Runtime.NODEJS_18_X,
       handler: 'getProductById.handler',
-      code: lambda.Code.fromAsset(path.join(__dirname, '../dist/lambda'))
+      code: lambda.Code.fromAsset(path.join(__dirname, '../dist/lambda')),
+      environment: {
+        PRODUCTS_TABLE_NAME:productsTable.tableName,
+        STOCKS_TABLE_NAME:stocksTable.tableName
+      }
     });
+
+    // Grant permissions to Lambda functions
+    productsTable.grantReadData(getProductsListLambda);
+    stocksTable.grantReadData(getProductsListLambda);
+    productsTable.grantReadData(getProductByIdLambda);
+    stocksTable.grantReadData(getProductByIdLambda);
+
 
     //Create the API Gateway
     const api = new apigateway.RestApi(this, 'ProductsServiceApi', {

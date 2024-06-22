@@ -27,7 +27,8 @@ describe('getProductsById', () => {
 
   it('returns a product when found', async () => {
     const mockEvent = { pathParameters: { id: '1' } } as unknown as APIGatewayProxyEvent;
-    const result = await getProductsById(mockEvent, mockContext, mockCallback) as APIGatewayProxyResult;
+    const result = await getProductsById(mockEvent) as APIGatewayProxyResult;
+    // const result = await getProductsById(mockEvent, mockContext, mockCallback) as APIGatewayProxyResult;
 
     expect(result).not.toBeUndefined();
     expect(result.statusCode).toBe(200);
@@ -37,7 +38,8 @@ describe('getProductsById', () => {
   it('returns 404 when product is not found', async () => {
     (getProductById as jest.Mock).mockReturnValue(null);
     const mockEvent = { pathParameters: { id: 'nonexistent' } } as unknown as APIGatewayProxyEvent;
-    const result = await getProductsById(mockEvent, mockContext, mockCallback) as APIGatewayProxyResult;
+    const result = await getProductsById(mockEvent) as APIGatewayProxyResult;
+    // const result = await getProductsById(mockEvent, mockContext, mockCallback) as APIGatewayProxyResult;
 
     expect(result).not.toBeUndefined();
     expect(result.statusCode).toBe(404);
