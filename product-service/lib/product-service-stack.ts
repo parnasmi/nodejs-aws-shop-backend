@@ -68,7 +68,7 @@ export class ProductServiceStack extends cdk.Stack {
       "CreateProductHandler",
       {
         runtime: lambda.Runtime.NODEJS_16_X,
-        code: lambda.Code.fromAsset("lambda-functions"),
+        code: lambda.Code.fromAsset(path.join(__dirname, '../dist/lambda')),
         handler: "createProduct.handler",
         environment: {
           PRODUCTS_TABLE_NAME: productsTable.tableName,
