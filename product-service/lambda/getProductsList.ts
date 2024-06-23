@@ -1,6 +1,8 @@
 // lambda/getProductsList.ts
 import { APIGatewayProxyHandler, APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import * as AWS from 'aws-sdk';
+import { IProduct } from "./products.types";
+import { HEADERS } from "./products";
 
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
 
@@ -12,7 +14,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
     const productsData = await dynamoDb.scan({ TableName: PRODUCTS_TABLE_NAME }).promise();
     const stocksData = await dynamoDb.scan({ TableName: STOCKS_TABLE_NAME }).promise();
 
-    const products = productsData.Items || [];
+    const products = (productsData.Items || []) as  IProduct[];
     const stocks = stocksData.Items || [];
 
     const productsWithStocks = products.map(product => {
@@ -25,13 +27,13 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
 
     return {
       statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: HEADERS,
       body: JSON.stringify(productsWithStocks),
     };
   } catch (error) {
     return {
       statusCode: 500,
-      headers: { 'Content-Type': 'application/json' },
+      headers: HEADERS,
       body: JSON.stringify({ message: 'Error retrieving products' }),
     };
   }

@@ -4,7 +4,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as path from 'path';
-import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
+import * as iam from "aws-cdk-lib/aws-iam";
 
 export class ProductServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -12,41 +12,69 @@ export class ProductServiceStack extends cdk.Stack {
 
     // Create DynamoDB tables
     const productsTable = new dynamodb.Table(this, 'ProductsTable', {
+      tableName:'products',
       partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
+      sortKey: {name: 'title', type: dynamodb.AttributeType.STRING},
+      billingMode:dynamodb.BillingMode.PROVISIONED,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
     const stocksTable = new dynamodb.Table(this, 'StocksTable', {
+      tableName:'stocks',
       partitionKey: { name: 'product_id', type: dynamodb.AttributeType.STRING },
       removalPolicy: cdk.RemovalPolicy.DESTROY,
+      billingMode: dynamodb.BillingMode.PROVISIONED,
+    });
+
+    //Create execution role for permissions
+    const dynamoRolePolicy = new iam.PolicyStatement({
+      actions: [
+        "dynamodb:Query",
+        "dynamodb:Scan",
+        "dynamodb:GetItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+      ],
+      resources: [productsTable.tableArn, stocksTable.tableArn],
     });
 
     // Create the Lambda functions
-    const getProductsListLambda = new NodejsFunction(this, 'GetProductsListHandler', {
-      runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'handler',
-      entry: path.join(__dirname, '..', 'lambda', 'getProductsList.ts'),
-      bundling: {
-        externalModules: ['aws-sdk'], // Use 'aws-sdk' available in Lambda runtime
-      },
+    const getProductsListLambda = new lambda.Function(this, 'GetProductsListHandler', {
+      runtime: lambda.Runtime.NODEJS_16_X,
+      code: lambda.Code.fromAsset(path.join(__dirname, '../dist/lambda')),
+      handler: 'getProductsList.handler',
       environment: {
         PRODUCTS_TABLE_NAME: productsTable.tableName,
         STOCKS_TABLE_NAME: stocksTable.tableName,
       },
     });
 
-    const getProductByIdLambda = new NodejsFunction(this, 'GetProductByIdHandler', {
-      runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'handler',
-      entry: path.join(__dirname, '..', 'lambda', 'getProductById.ts'),
-      bundling: {
-        externalModules: ['aws-sdk'], // Use 'aws-sdk' available in Lambda runtime
-      },
+    getProductsListLambda.addToRolePolicy(dynamoRolePolicy);
+
+    const getProductByIdLambda = new lambda.Function(this, 'GetProductByIdHandler', {
+      runtime: lambda.Runtime.NODEJS_16_X,
+      handler: 'getProductById.handler',
+      code: lambda.Code.fromAsset(path.join(__dirname, '../dist/lambda')),
       environment: {
         PRODUCTS_TABLE_NAME: productsTable.tableName,
         STOCKS_TABLE_NAME: stocksTable.tableName,
       },
     });
+
+    getProductByIdLambda.addToRolePolicy(dynamoRolePolicy);
+
+
+    const populateTablesLambda = new lambda.Function(this, 'PopulateTablesHandler', {
+      runtime: lambda.Runtime.NODEJS_16_X,
+      handler: 'populateTables.handler',
+      code: lambda.Code.fromAsset(path.join(__dirname, '../dist/lambda')),
+      environment: {
+        PRODUCTS_TABLE_NAME: productsTable.tableName,
+        STOCKS_TABLE_NAME: stocksTable.tableName,
+      },
+    });
+
+    populateTablesLambda.addToRolePolicy(dynamoRolePolicy);
 
     // Grant permissions to Lambda functions
     productsTable.grantReadData(getProductsListLambda);
@@ -67,9 +95,10 @@ export class ProductServiceStack extends cdk.Stack {
     // Create /products resource
     const products = api.root.addResource('products');
 
+    
     // Add GET /products
     products.addMethod('GET', new apigateway.LambdaIntegration(getProductsListLambda));
-
+    
     // Create /products/{id} resource
     const product = products.addResource('{id}');
 
