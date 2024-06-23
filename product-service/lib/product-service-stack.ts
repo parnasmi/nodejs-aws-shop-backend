@@ -4,41 +4,48 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as path from 'path';
+import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 
 export class ProductServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
     // Create DynamoDB tables
-    const productsTable = new dynamodb.Table(this, 'ProductsTable',{
-      partitionKey: {name: 'id', type: dynamodb.AttributeType.STRING},
-      removalPolicy:cdk.RemovalPolicy.DESTROY
+    const productsTable = new dynamodb.Table(this, 'ProductsTable', {
+      partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
     const stocksTable = new dynamodb.Table(this, 'StocksTable', {
-      partitionKey: {name: 'product_id', type: dynamodb.AttributeType.STRING},
-      removalPolicy:cdk.RemovalPolicy.DESTROY
+      partitionKey: { name: 'product_id', type: dynamodb.AttributeType.STRING },
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
     // Create the Lambda functions
-    const getProductsListLambda = new lambda.Function(this, 'GetProductsListHandler', {
+    const getProductsListLambda = new NodejsFunction(this, 'GetProductsListHandler', {
       runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'getProductsList.handler',
-      code: lambda.Code.fromAsset(path.join(__dirname, '../dist/lambda')),
+      handler: 'handler',
+      entry: path.join(__dirname, '..', 'lambda', 'getProductsList.ts'),
+      bundling: {
+        externalModules: ['aws-sdk'], // Use 'aws-sdk' available in Lambda runtime
+      },
       environment: {
-        PRODUCTS_TABLE_NAME:productsTable.tableName,
-        STOCKS_TABLE_NAME:stocksTable.tableName
-      }
+        PRODUCTS_TABLE_NAME: productsTable.tableName,
+        STOCKS_TABLE_NAME: stocksTable.tableName,
+      },
     });
 
-    const getProductByIdLambda = new lambda.Function(this, 'GetProductByIdHandler', {
+    const getProductByIdLambda = new NodejsFunction(this, 'GetProductByIdHandler', {
       runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'getProductById.handler',
-      code: lambda.Code.fromAsset(path.join(__dirname, '../dist/lambda')),
+      handler: 'handler',
+      entry: path.join(__dirname, '..', 'lambda', 'getProductById.ts'),
+      bundling: {
+        externalModules: ['aws-sdk'], // Use 'aws-sdk' available in Lambda runtime
+      },
       environment: {
-        PRODUCTS_TABLE_NAME:productsTable.tableName,
-        STOCKS_TABLE_NAME:stocksTable.tableName
-      }
+        PRODUCTS_TABLE_NAME: productsTable.tableName,
+        STOCKS_TABLE_NAME: stocksTable.tableName,
+      },
     });
 
     // Grant permissions to Lambda functions
@@ -47,11 +54,10 @@ export class ProductServiceStack extends cdk.Stack {
     productsTable.grantReadData(getProductByIdLambda);
     stocksTable.grantReadData(getProductByIdLambda);
 
-
-    //Create the API Gateway
+    // Create the API Gateway
     const api = new apigateway.RestApi(this, 'ProductsServiceApi', {
       restApiName: 'Product Service',
-      description: 'The current service serves products.',
+      description: 'This service serves products.',
       defaultCorsPreflightOptions: {
         allowOrigins: apigateway.Cors.ALL_ORIGINS,
         allowMethods: apigateway.Cors.ALL_METHODS,
@@ -61,14 +67,13 @@ export class ProductServiceStack extends cdk.Stack {
     // Create /products resource
     const products = api.root.addResource('products');
 
-    //Add GET /products
+    // Add GET /products
     products.addMethod('GET', new apigateway.LambdaIntegration(getProductsListLambda));
 
-    //Create /products/{id} resource
+    // Create /products/{id} resource
     const product = products.addResource('{id}');
 
     // Add GET /products/{id}
     product.addMethod('GET', new apigateway.LambdaIntegration(getProductByIdLambda));
-
   }
 }
