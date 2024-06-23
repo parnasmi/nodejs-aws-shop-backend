@@ -20,15 +20,11 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       body: JSON.stringify({ message: 'Product ID is required' }),
     };
   }
-  //todo: remove logs
-  console.log('PRODUCTS_TABLE_NAME',PRODUCTS_TABLE_NAME);
-  console.log('STOCKS_TABLE_NAME',STOCKS_TABLE_NAME);
-  console.log('productId',productId);
+  
   try {
     const productData = await dynamoDb.get({ TableName: PRODUCTS_TABLE_NAME, Key: { id: productId } }).promise();
     const stockData = await dynamoDb.get({ TableName: STOCKS_TABLE_NAME, Key: { product_id: productId } }).promise();
-    console.log('productData',productData);
-    console.log('stockData',stockData);
+    
     if (!productData.Item) {
       return {
         statusCode: 404,
@@ -50,7 +46,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
     return {
       statusCode: 500,
       headers: HEADERS,
-      body: JSON.stringify({ message: 'Error retrieving product' }),
+      body: JSON.stringify({ message: 'Error retrieving product', error }),
     };
   }
 };

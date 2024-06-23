@@ -14,7 +14,6 @@ export class ProductServiceStack extends cdk.Stack {
     const productsTable = new dynamodb.Table(this, 'ProductsTable', {
       tableName:'products',
       partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
-      sortKey: {name: 'title', type: dynamodb.AttributeType.STRING},
       billingMode:dynamodb.BillingMode.PROVISIONED,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
