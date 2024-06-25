@@ -2,7 +2,8 @@ import * as AWS from "aws-sdk";
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 
 import { IProduct } from "./products.types";
-import { v4 } from "uuid";
+import { randomUUID } from "crypto";
+import { HEADERS } from "./products";
 
 const dynamodb = new AWS.DynamoDB.DocumentClient();
 
@@ -16,8 +17,18 @@ export const handler = async (
 ): Promise<APIGatewayProxyResult> => {
   try {
     const body = JSON.parse(event.body || "{}") as ProductPayload;
-    const id = v4();
+    const id = randomUUID();
     const { title, description, price, count } = body;
+
+    console.log("Event: ", JSON.stringify(event));
+
+    if (!event.body) {
+      return {
+        statusCode:400,
+        headers: HEADERS,
+        body: JSON.stringify('Invalid request'),
+      }
+    }
 
     const productParams: AWS.DynamoDB.DocumentClient.PutItemInput = {
       TableName: productsTableName,
@@ -33,24 +44,14 @@ export const handler = async (
     await dynamodb.put(stockParams).promise();
 
     return {
-      statusCode: 200,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "PUT",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Content-Type": "application/json",
-      },
+      statusCode: 201,
+      headers: HEADERS,
       body: JSON.stringify({ message: "Product created successfully" }),
     };
   } catch (error: any) {
     return {
       statusCode: 500,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "PUT",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Content-Type": "application/json",
-      },
+      headers: HEADERS,
       body: JSON.stringify({ message: error.message }),
     };
   }

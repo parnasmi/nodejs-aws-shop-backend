@@ -11,7 +11,7 @@ const STOCKS_TABLE_NAME = process.env.STOCKS_TABLE_NAME!;
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   const productId = event.pathParameters?.id;
 
- 
+  console.log("Event: ", JSON.stringify(event));
 
   if (!productId) {
     return {

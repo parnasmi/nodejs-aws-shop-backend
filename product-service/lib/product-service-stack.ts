@@ -82,6 +82,8 @@ export class ProductServiceStack extends cdk.Stack {
     stocksTable.grantReadData(getProductsListLambda);
     productsTable.grantReadData(getProductByIdLambda);
     stocksTable.grantReadData(getProductByIdLambda);
+    productsTable.grantReadWriteData(createProductLambda);
+    stocksTable.grantReadWriteData(createProductLambda);
 
     // Create the API Gateway
     const api = new apigateway.RestApi(this, 'ProductsServiceApi', {
@@ -90,6 +92,7 @@ export class ProductServiceStack extends cdk.Stack {
       defaultCorsPreflightOptions: {
         allowOrigins: apigateway.Cors.ALL_ORIGINS,
         allowMethods: apigateway.Cors.ALL_METHODS,
+        allowHeaders: apigateway.Cors.DEFAULT_HEADERS
       },
     });
 
@@ -106,7 +109,7 @@ export class ProductServiceStack extends cdk.Stack {
     // Add GET /products/{id}
     product.addMethod('GET', new apigateway.LambdaIntegration(getProductByIdLambda));
 
-    //Add PUT /products
-    products.addMethod( 'PUT', new apigateway.LambdaIntegration(createProductLambda));
+    //Add POST /products
+    products.addMethod('POST', new apigateway.LambdaIntegration(createProductLambda));
   }
 }

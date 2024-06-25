@@ -11,6 +11,7 @@ const STOCKS_TABLE_NAME = process.env.STOCKS_TABLE_NAME!;
 
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
+    console.log("Event: ", JSON.stringify(event));
     const productsData = await dynamoDb.scan({ TableName: PRODUCTS_TABLE_NAME }).promise();
     const stocksData = await dynamoDb.scan({ TableName: STOCKS_TABLE_NAME }).promise();
 
