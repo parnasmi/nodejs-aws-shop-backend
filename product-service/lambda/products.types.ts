@@ -4,3 +4,7 @@ export type IProduct = {
     description: string;
     price: number;
   }
+
+  export type Stock = {
+    count:number
+  }
