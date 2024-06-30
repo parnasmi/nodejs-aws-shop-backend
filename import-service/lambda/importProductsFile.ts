@@ -16,14 +16,21 @@ export const handler: APIGatewayProxyHandler = async (event) => {
   const params = {
     Bucket: process.env.BUCKET_NAME!,
     Key: `uploaded/${fileName}`,
-    Expires: 60, // URL expiration time in seconds
+    Expires: 3600, // URL expiration time in seconds
+    ContentType: "text/csv",
   };
 
   try {
     const signedUrl = s3.getSignedUrl('putObject', params);
     return {
       statusCode: 200,
-      body: JSON.stringify({ url: signedUrl }),
+      body: JSON.stringify(signedUrl),
+      headers: {
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Methods": "GET, PUT, OPTIONS, DELETE",
+        "Content-Type": "text/plain",
+        "Access-Control-Allow-Origin": "*",
+      },
     };
   } catch (error) {
     return {

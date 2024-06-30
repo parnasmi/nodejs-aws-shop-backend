@@ -11,12 +11,6 @@ export class ImportServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    
-    // const bucket = new s3.Bucket(this, 'ImportBucket', {
-    //   bucketName: 'my-import-bucket-uz',
-    //   removalPolicy: cdk.RemovalPolicy.DESTROY,
-    //   autoDeleteObjects: true,
-    // });
     // Create S3 bucket
     const bucket: cdk.aws_s3.IBucket = s3.Bucket.fromBucketName(
       this,
@@ -45,11 +39,7 @@ export class ImportServiceStack extends cdk.Stack {
 
     // Create /import resource
     const importResource = api.root.addResource('import');
-    // importResource.addMethod('GET', new apigateway.LambdaIntegration(importProductsFileLambda, {
-    //   requestParameters: {
-    //     'method.request.querystring.name': 'true',
-    //   },
-    // }));
+   
     importResource.addMethod('GET', new apigateway.LambdaIntegration(importProductsFileLambda), {
       requestParameters: {
         'method.request.querystring.name': true,
