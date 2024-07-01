@@ -1,12 +1,12 @@
-// lambda/importFileParser.ts
 import { S3Handler } from 'aws-lambda';
 import * as AWS from 'aws-sdk';
 import * as csv from 'csv-parser';
 
-const s3 = new AWS.S3();
+const s3 = new AWS.S3({ region: process.env.AWS_REGION || "eu-north-1" });
 
 export const handler: S3Handler = async (event) => {
   for (const record of event.Records) {
+    console.log('record',record);
     const params = {
       Bucket: record.s3.bucket.name,
       Key: record.s3.object.key,
