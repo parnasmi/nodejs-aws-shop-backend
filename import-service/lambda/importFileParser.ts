@@ -28,5 +28,15 @@ export const handler: S3Handler = async (event) => {
           resolve();
         });
     });
+
+    const newKey = record.s3.object.key.replace('uploaded/', 'parsed/');
+
+    await s3.copyObject({
+      Bucket: record.s3.bucket.name,
+      CopySource:`${record.s3.bucket.name}/${record.s3.object.key}`,
+      Key: newKey,
+    }).promise();
+
+    await s3.deleteObject(params).promise();
   }
 };

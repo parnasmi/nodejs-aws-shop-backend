@@ -61,7 +61,7 @@ export class ImportServiceStack extends cdk.Stack {
     });
 
     // Grant the Lambda function permissions to read from the S3 bucket
-    bucket.grantRead(importFileParserLambda);
+    bucket.grantReadWrite(importFileParserLambda);
 
     // Add S3 event notification to trigger the Lambda function
     bucket.addEventNotification(s3.EventType.OBJECT_CREATED, new s3n.LambdaDestination(importFileParserLambda), {
