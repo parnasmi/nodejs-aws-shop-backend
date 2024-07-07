@@ -14,8 +14,11 @@ dist
 dist-ssr
 *.local
 product-service/node_modules
-product-service/cdk-out
+product-service/cdk.out
 product-service/dist
+import-service/node_modules
+import-service/cdk.out
+import-service/dist
 
 # Editor directories and files
 .vscode/*
