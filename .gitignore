@@ -17,6 +17,11 @@ product-service/node_modules
 product-service/cdk-out
 product-service/dist
 
+import-service/node_modules
+import-service/cdk-out
+import-service/dist
+import-service/lambda/node_modules
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
