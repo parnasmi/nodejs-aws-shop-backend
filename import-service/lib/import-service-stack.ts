@@ -6,6 +6,7 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as s3n from "aws-cdk-lib/aws-s3-notifications";
 import * as path from 'path';
+import * as sqs from 'aws-cdk-lib/aws-sqs';
 
 export class ImportServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -18,6 +19,12 @@ export class ImportServiceStack extends cdk.Stack {
       "my-import-bucket-uz",
     );
 
+    // Define the SQS queue
+    const queue = new sqs.Queue(this, 'CatalogItemsQueue', {
+      visibilityTimeout: cdk.Duration.seconds(30),
+      receiveMessageWaitTime: cdk.Duration.seconds(20),
+    });
+
     // Create the Lambda function
     const importProductsFileLambda = new lambda.Function(this, 'ImportProductsFileLambda', {
       runtime: lambda.Runtime.NODEJS_16_X,
@@ -27,6 +34,8 @@ export class ImportServiceStack extends cdk.Stack {
         BUCKET_NAME: bucket.bucketName,
       },
     });
+
+    
 
     // Grant the Lambda function permissions to interact with the S3 bucket
     bucket.grantReadWrite(importProductsFileLambda);
@@ -58,10 +67,16 @@ export class ImportServiceStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_16_X,
       handler: 'importFileParser.handler',
       code: lambda.Code.fromAsset(path.join(__dirname, '../lambda')),
+      environment: {
+        SQS_QUEUE_URL: queue.queueUrl,
+      },
     });
 
     // Grant the Lambda function permissions to read from the S3 bucket
     bucket.grantReadWrite(importFileParserLambda);
+
+    // Grant the Lambda function permissions to send messages to the SQS queue
+    queue.grantSendMessages(importFileParserLambda);
 
     // Add S3 event notification to trigger the Lambda function
     bucket.addEventNotification(s3.EventType.OBJECT_CREATED, new s3n.LambdaDestination(importFileParserLambda), {
