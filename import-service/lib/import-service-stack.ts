@@ -19,11 +19,14 @@ export class ImportServiceStack extends cdk.Stack {
       "my-import-bucket-uz",
     );
 
-    // Define the SQS queue
-    const queue = new sqs.Queue(this, 'CatalogItemsQueue', {
-      visibilityTimeout: cdk.Duration.seconds(30),
-      receiveMessageWaitTime: cdk.Duration.seconds(20),
-    });
+    // // Define the SQS queue
+    // const queue = new sqs.Queue(this, 'CatalogItemsQueue', {
+    //   visibilityTimeout: cdk.Duration.seconds(30),
+    //   receiveMessageWaitTime: cdk.Duration.seconds(20),
+    // });
+
+    // Reference the SQS queue created in ProductServiceStack
+    const queue = sqs.Queue.fromQueueArn(this, 'CatalogItemsQueue', cdk.Fn.importValue('CatalogItemsQueueService'));
 
     // Create the Lambda function
     const importProductsFileLambda = new lambda.Function(this, 'ImportProductsFileLambda', {
@@ -74,9 +77,6 @@ export class ImportServiceStack extends cdk.Stack {
 
     // Grant the Lambda function permissions to read from the S3 bucket
     bucket.grantReadWrite(importFileParserLambda);
-
-    // Grant the Lambda function permissions to send messages to the SQS queue
-    queue.grantSendMessages(importFileParserLambda);
 
     // Add S3 event notification to trigger the Lambda function
     bucket.addEventNotification(s3.EventType.OBJECT_CREATED, new s3n.LambdaDestination(importFileParserLambda), {

@@ -7,10 +7,18 @@ import * as path from 'path';
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import { SqsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
+import * as sns from 'aws-cdk-lib/aws-sns';
+import * as subs from 'aws-cdk-lib/aws-sns-subscriptions';
 
 export class ProductServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
+
+    // Define the SNS topic
+    const topic = new sns.Topic(this, 'CreateProductTopic');
+
+    // Add an email subscription to the topic
+    topic.addSubscription(new subs.EmailSubscription('i-parnas@yandex.com'));
 
     // Create DynamoDB tables
     const productsTable = new dynamodb.Table(this, 'ProductsTable', {
@@ -29,8 +37,14 @@ export class ProductServiceStack extends cdk.Stack {
 
     // Define the SQS queue
     const queue = new sqs.Queue(this, 'CatalogItemsQueue', {
+      queueName: 'CatalogItemsQueueService',
       visibilityTimeout: cdk.Duration.seconds(30),
       receiveMessageWaitTime: cdk.Duration.seconds(20),
+    });
+
+    new cdk.CfnOutput(this, "CatalogItemsQueueUrl", {
+      value: queue.queueArn,
+      exportName: "CatalogItemsQueueService",
     });
 
     //Create execution role for permissions
@@ -92,6 +106,7 @@ export class ProductServiceStack extends cdk.Stack {
       code: lambda.Code.fromAsset(path.join(__dirname, '../dist/lambda')),
       environment: {
         PRODUCTS_TABLE_NAME: productsTable.tableName,
+        SNS_TOPIC_ARN: topic.topicArn,
       },
     });
 
@@ -105,6 +120,10 @@ export class ProductServiceStack extends cdk.Stack {
     productsTable.grantReadWriteData(createProductLambda);
     stocksTable.grantReadWriteData(createProductLambda);
     productsTable.grantWriteData(catalogBatchProcessLambda);
+
+     // Grant the Lambda function permissions to interact with SQS
+     queue.grantConsumeMessages(catalogBatchProcessLambda);
+     topic.grantPublish(catalogBatchProcessLambda);
 
     // Create the API Gateway
     const api = new apigateway.RestApi(this, 'ProductsServiceApi', {
@@ -140,7 +159,6 @@ export class ProductServiceStack extends cdk.Stack {
       })
     );
 
-    // Grant the Lambda function permissions to interact with SQS
-    queue.grantConsumeMessages(catalogBatchProcessLambda);
+   
   }
 }

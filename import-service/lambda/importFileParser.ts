@@ -7,6 +7,7 @@ const sqs = new AWS.SQS({ region: process.env.AWS_REGION || "eu-north-1" });
 const queueUrl = process.env.SQS_QUEUE_URL!;
 
 export const handler: S3Handler = async (event) => {
+  console.log('queueUrl', queueUrl);
   for (const record of event.Records) {
     console.log('record', record);
     const params = {
@@ -19,6 +20,8 @@ export const handler: S3Handler = async (event) => {
     await new Promise<void>((resolve, reject) => {
       s3Stream.pipe(csv())
         .on('data', async (data) => {
+          console.log('CSV record:', data); // Log each CSV record
+
           const messageParams = {
             QueueUrl: queueUrl,
             MessageBody: JSON.stringify(data),
@@ -43,11 +46,16 @@ export const handler: S3Handler = async (event) => {
 
     const newKey = record.s3.object.key.replace('uploaded/', 'parsed/');
 
+    console.log('Copying S3 object to new location:', newKey); // Log the copy operation
+
     await s3.copyObject({
       Bucket: record.s3.bucket.name,
       CopySource:`${record.s3.bucket.name}/${record.s3.object.key}`,
       Key: newKey,
     }).promise();
+
+    console.log('Deleting original S3 object:', params); // Log the delete operation
+
 
     await s3.deleteObject(params).promise();
   }
