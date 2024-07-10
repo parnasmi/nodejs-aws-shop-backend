@@ -7,11 +7,10 @@ const topicArn = process.env.SNS_TOPIC_ARN!;
 
 
 export const handler: SQSHandler = async (event) => {
-    console.log('Received event:', JSON.stringify(event, null, 2)); // Add this line
   for (const record of event.Records) {
     const product = JSON.parse(record.body);
     
-    console.log('Processing product:', product); // Add this line
+    console.log('Processing product:', product);
 
     const params = {
       TableName: process.env.PRODUCTS_TABLE_NAME!,
@@ -26,6 +25,12 @@ export const handler: SQSHandler = async (event) => {
       const snsParams = {
         Message: JSON.stringify(product),
         TopicArn: topicArn,
+        MessageAttributes: {
+          price: {
+            DataType: 'Number',
+            StringValue: String(product.price),
+          },
+        },
       };
 
       await sns.publish(snsParams).promise();
