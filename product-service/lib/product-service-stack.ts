@@ -15,10 +15,19 @@ export class ProductServiceStack extends cdk.Stack {
     super(scope, id, props);
 
     // Define the SNS topic
-    const topic = new sns.Topic(this, 'CreateProductTopic');
+    const createProductTopic = new sns.Topic(this, 'CreateProductTopic');
 
-    // Add an email subscription to the topic
-    topic.addSubscription(new subs.EmailSubscription('i-parnas@yandex.com'));
+    // Email subscription for all messages
+    createProductTopic.addSubscription(new subs.EmailSubscription('i-parnas@yandex.com'));
+
+    // Email subscription with filter policy for price > 100
+    createProductTopic.addSubscription(new subs.EmailSubscription('parnas-mi@yandex.com', {
+      filterPolicy: {
+        price: sns.SubscriptionFilter.numericFilter({
+          greaterThan: 100,
+        }),
+      },
+    }));
 
     // Create DynamoDB tables
     const productsTable = new dynamodb.Table(this, 'ProductsTable', {
@@ -106,7 +115,7 @@ export class ProductServiceStack extends cdk.Stack {
       code: lambda.Code.fromAsset(path.join(__dirname, '../dist/lambda')),
       environment: {
         PRODUCTS_TABLE_NAME: productsTable.tableName,
-        SNS_TOPIC_ARN: topic.topicArn,
+        SNS_TOPIC_ARN: createProductTopic.topicArn,
       },
     });
 
@@ -123,7 +132,7 @@ export class ProductServiceStack extends cdk.Stack {
 
      // Grant the Lambda function permissions to interact with SQS
      queue.grantConsumeMessages(catalogBatchProcessLambda);
-     topic.grantPublish(catalogBatchProcessLambda);
+     createProductTopic.grantPublish(catalogBatchProcessLambda);
 
     // Create the API Gateway
     const api = new apigateway.RestApi(this, 'ProductsServiceApi', {
@@ -158,7 +167,5 @@ export class ProductServiceStack extends cdk.Stack {
         batchSize: 5,
       })
     );
-
-   
   }
 }
