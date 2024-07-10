@@ -16,6 +16,7 @@ export class ProductServiceStack extends cdk.Stack {
 
     // Define the SNS topic
     const createProductTopic = new sns.Topic(this, 'CreateProductTopic');
+<<<<<<< HEAD
 
     // Email subscription for all messages
     createProductTopic.addSubscription(new subs.EmailSubscription('i-parnas@yandex.com'));
@@ -28,6 +29,21 @@ export class ProductServiceStack extends cdk.Stack {
         }),
       },
     }));
+=======
+
+    // Email subscription for all messages
+    createProductTopic.addSubscription(new subs.EmailSubscription('i-parnas@yandex.com'));
+
+    // Email subscription with filter policy for price > 100
+    createProductTopic.addSubscription(new subs.EmailSubscription('parnas-mi@yandex.com', {
+      filterPolicy: {
+        price: sns.SubscriptionFilter.numericFilter({
+          greaterThan: 100,
+        }),
+      },
+    }));
+
+>>>>>>> 4316e7218ec545d53e5bdd7803627d11e38c7093
 
     // Create DynamoDB tables
     const productsTable = new dynamodb.Table(this, 'ProductsTable', {
