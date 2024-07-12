@@ -32,7 +32,17 @@ export class ImportServiceStack extends cdk.Stack {
       },
     });
 
-    
+    // Reference the authorization Lambda function
+    const authorizerLambda = lambda.Function.fromFunctionArn(
+      this,
+      'BasicAuthorizer',
+      'arn:aws:lambda:eu-north-1:905418264985:function:AuthorizationServiceStack-BasicAuthorizer2B49C1FC-b16aBiCGxE5w'
+    );
+
+    // Create Lambda authorizer
+    const authorizer = new apigateway.TokenAuthorizer(this, 'Authorizer', {
+      handler: authorizerLambda,
+    });
 
     // Grant the Lambda function permissions to interact with the S3 bucket
     bucket.grantReadWrite(importProductsFileLambda);
@@ -41,12 +51,25 @@ export class ImportServiceStack extends cdk.Stack {
     const api = new apigateway.RestApi(this, 'ImportServiceApi', {
       restApiName: 'Import Service',
       description: 'This service imports products.',
+      defaultCorsPreflightOptions: {
+        allowOrigins: apigateway.Cors.ALL_ORIGINS,
+        allowMethods: apigateway.Cors.ALL_METHODS,
+        allowHeaders: [
+          'Authorization',
+          'Content-Type',
+          'X-Amz-Date',
+          'X-Amz-Security-Token',
+          'X-Api-Key',
+        ],
+      }
     });
 
     // Create /import resource
     const importResource = api.root.addResource('import');
    
     importResource.addMethod('GET', new apigateway.LambdaIntegration(importProductsFileLambda), {
+      authorizationType:apigateway.AuthorizationType.CUSTOM,
+      authorizer,
       requestParameters: {
         'method.request.querystring.name': true,
       },
