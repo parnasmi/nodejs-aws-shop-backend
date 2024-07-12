@@ -5,10 +5,29 @@ import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as path from 'path';
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as sqs from 'aws-cdk-lib/aws-sqs';
+import { SqsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
+import * as sns from 'aws-cdk-lib/aws-sns';
+import * as subs from 'aws-cdk-lib/aws-sns-subscriptions';
 
 export class ProductServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
+
+    // Define the SNS createProductTopic
+    const createProductTopic = new sns.Topic(this, 'CreateProductTopic');
+
+    // Email subscription for all messages
+    createProductTopic.addSubscription(new subs.EmailSubscription('i-parnas@yandex.com'));
+
+    // Email subscription with filter policy for price > 100
+    createProductTopic.addSubscription(new subs.EmailSubscription('parnas-mi@yandex.com', {
+      filterPolicy: {
+        price: sns.SubscriptionFilter.numericFilter({
+          greaterThan: 100,
+        }),
+      },
+    }));
 
     // Create DynamoDB tables
     const productsTable = new dynamodb.Table(this, 'ProductsTable', {
@@ -23,6 +42,18 @@ export class ProductServiceStack extends cdk.Stack {
       partitionKey: { name: 'product_id', type: dynamodb.AttributeType.STRING },
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       billingMode: dynamodb.BillingMode.PROVISIONED,
+    });
+
+    // Define the SQS queue
+    const queue = new sqs.Queue(this, 'CatalogItemsQueue', {
+      queueName: 'CatalogItemsQueueService',
+      visibilityTimeout: cdk.Duration.seconds(30),
+      receiveMessageWaitTime: cdk.Duration.seconds(20),
+    });
+
+    new cdk.CfnOutput(this, "CatalogItemsQueueUrl", {
+      value: queue.queueArn,
+      exportName: "CatalogItemsQueueService",
     });
 
     //Create execution role for permissions
@@ -77,6 +108,19 @@ export class ProductServiceStack extends cdk.Stack {
     );
     createProductLambda.addToRolePolicy(dynamoRolePolicy);
 
+    
+    const catalogBatchProcessLambda = new lambda.Function(this, 'CatalogBatchProcessFunction', {
+      runtime: lambda.Runtime.NODEJS_16_X,
+      handler: 'catalogBatchProcess.handler',
+      code: lambda.Code.fromAsset(path.join(__dirname, '../dist/lambda')),
+      environment: {
+        PRODUCTS_TABLE_NAME: productsTable.tableName,
+        SNS_TOPIC_ARN: createProductTopic.topicArn,
+      },
+    });
+
+    catalogBatchProcessLambda.addToRolePolicy(dynamoRolePolicy);
+    
     // Grant permissions to Lambda functions
     productsTable.grantReadData(getProductsListLambda);
     stocksTable.grantReadData(getProductsListLambda);
@@ -84,6 +128,11 @@ export class ProductServiceStack extends cdk.Stack {
     stocksTable.grantReadData(getProductByIdLambda);
     productsTable.grantReadWriteData(createProductLambda);
     stocksTable.grantReadWriteData(createProductLambda);
+    productsTable.grantWriteData(catalogBatchProcessLambda);
+
+     // Grant the Lambda function permissions to interact with SQS
+     queue.grantConsumeMessages(catalogBatchProcessLambda);
+     createProductTopic.grantPublish(catalogBatchProcessLambda);
 
     // Create the API Gateway
     const api = new apigateway.RestApi(this, 'ProductsServiceApi', {
@@ -111,5 +160,12 @@ export class ProductServiceStack extends cdk.Stack {
 
     //Add POST /products
     products.addMethod('POST', new apigateway.LambdaIntegration(createProductLambda));
+
+    // Add the SQS event source to the Lambda function
+    catalogBatchProcessLambda.addEventSource(
+      new SqsEventSource(queue, {
+        batchSize: 5,
+      })
+    );
   }
 }
