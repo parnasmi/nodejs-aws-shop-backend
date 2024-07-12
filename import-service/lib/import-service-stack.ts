@@ -31,18 +31,20 @@ export class ImportServiceStack extends cdk.Stack {
         BUCKET_NAME: bucket.bucketName,
       },
     });
+    //TODO: remove commented code
+    // // Reference the authorization Lambda function
+    // const authorizerLambda = lambda.Function.fromFunctionArn(
+    //   this,
+    //   'BasicAuthorizer',
+    //   'arn:aws:lambda:eu-north-1:905418264985:function:AuthorizationServiceStack-BasicAuthorizer2B49C1FC-b16aBiCGxE5w'
+    // );
 
-    // Reference the authorization Lambda function
-    const authorizerLambda = lambda.Function.fromFunctionArn(
-      this,
-      'BasicAuthorizer',
-      'arn:aws:lambda:eu-north-1:905418264985:function:AuthorizationServiceStack-BasicAuthorizer2B49C1FC-b16aBiCGxE5w'
-    );
+    // // Create Lambda authorizer
+    // const authorizer = new apigateway.TokenAuthorizer(this, 'Authorizer', {
+    //   handler: authorizerLambda,
+    // });
 
-    // Create Lambda authorizer
-    const authorizer = new apigateway.TokenAuthorizer(this, 'Authorizer', {
-      handler: authorizerLambda,
-    });
+    
 
     // Grant the Lambda function permissions to interact with the S3 bucket
     bucket.grantReadWrite(importProductsFileLambda);
@@ -63,16 +65,28 @@ export class ImportServiceStack extends cdk.Stack {
         ],
       }
     });
+    
+    // Reference the authorization Lambda function
+    const basicAuthorizerArn = cdk.Fn.importValue('BasicAuthorizerArn');
+    
+    // Create Lambda authorizer
+    const authorizer = new apigateway.CfnAuthorizer(this, 'BasicAuthorizer', {
+      restApiId: api.restApiId,
+      name: 'BasicAuthorizer',
+      type: 'TOKEN',
+      authorizerUri: `arn:aws:apigateway:${this.region}:lambda:path/2015-03-31/functions/${basicAuthorizerArn}/invocations`,
+      identitySource: 'method.request.header.Authorization',
+    });
 
     // Create /import resource
     const importResource = api.root.addResource('import');
    
     importResource.addMethod('GET', new apigateway.LambdaIntegration(importProductsFileLambda), {
-      authorizationType:apigateway.AuthorizationType.CUSTOM,
-      authorizer,
       requestParameters: {
         'method.request.querystring.name': true,
       },
+      authorizationType: apigateway.AuthorizationType.CUSTOM,
+      authorizer: { authorizerId: authorizer.ref },
     });
 
     // Add necessary policies to the Lambda function

@@ -2,6 +2,7 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as path from 'path';
+import * as iam from 'aws-cdk-lib/aws-iam';
 
 export class AuthorizationServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -13,7 +14,7 @@ export class AuthorizationServiceStack extends cdk.Stack {
       handler: 'basicAuthorizer.handler',
       code: lambda.Code.fromAsset(path.join(__dirname, '../dist/lambdas')),
       environment: {
-        parnasmi: 'TEST_PASSWORD',
+        parnasmi: process.env.parnasmi!,
       },
     });
 
@@ -23,10 +24,17 @@ export class AuthorizationServiceStack extends cdk.Stack {
       resources: ['*'],
     }));
 
-    // Expose basic authorization lambda Arn
-    new cdk.CfnOutput(this, 'BasicAuthArnOutput', {
+    // Grant API Gateway permission to invoke the Lambda function
+    const apiGatewayPrincipal = new iam.ServicePrincipal('apigateway.amazonaws.com');
+    basicAuthorizer.addPermission('ApiGatewayInvoke', {
+      principal: apiGatewayPrincipal,
+      sourceArn: `arn:aws:execute-api:${this.region}:${this.account}:*`,
+    });
+
+
+    new cdk.CfnOutput(this, 'BasicAuthorizerArn', {
       value: basicAuthorizer.functionArn,
-      exportName: 'basicAuthArn',
-    })
+      exportName: 'BasicAuthorizerArn'
+    });
   }
 }
