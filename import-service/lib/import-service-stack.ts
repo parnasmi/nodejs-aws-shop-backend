@@ -31,20 +31,6 @@ export class ImportServiceStack extends cdk.Stack {
         BUCKET_NAME: bucket.bucketName,
       },
     });
-    //TODO: remove commented code
-    // // Reference the authorization Lambda function
-    // const authorizerLambda = lambda.Function.fromFunctionArn(
-    //   this,
-    //   'BasicAuthorizer',
-    //   'arn:aws:lambda:eu-north-1:905418264985:function:AuthorizationServiceStack-BasicAuthorizer2B49C1FC-b16aBiCGxE5w'
-    // );
-
-    // // Create Lambda authorizer
-    // const authorizer = new apigateway.TokenAuthorizer(this, 'Authorizer', {
-    //   handler: authorizerLambda,
-    // });
-
-    
 
     // Grant the Lambda function permissions to interact with the S3 bucket
     bucket.grantReadWrite(importProductsFileLambda);

@@ -25,7 +25,7 @@ import-service/lambda/node_modules
 authorization-service/.env
 authorization-service/cdk.out
 authorization-service/dist
-authorization-service/lambda/node_modules
+authorization-service/lambdas/node_modules
 
 # Editor directories and files
 .vscode/*

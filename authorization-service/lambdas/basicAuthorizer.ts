@@ -27,7 +27,7 @@ const generatePolicy = (principalId: string, effect: string, resource: string) =
   };
 
 export const handler = async (event: APIGatewayTokenAuthorizerEvent): Promise<APIGatewayAuthorizerResult | HTTPRESPONSE > => {
-    console.log('Event: ', event);
+    console.log('handler Event: ', event);
     if (!event.authorizationToken) {
         return {
           statusCode: 401,
@@ -40,7 +40,10 @@ export const handler = async (event: APIGatewayTokenAuthorizerEvent): Promise<AP
         const decodedToken = Buffer.from(token, 'base64').toString('utf-8');
         const [username, password] = decodedToken.split(':');
       
-        const expectedPassword = process.env[username];
+        const expectedPassword = process.env[username.trim()];
+        // const expectedPassword = 'TEST_PASSWORD';
+
+        console.log('expectedPassword',{expectedPassword, username, password, envVars:process.env});
   
         if (expectedPassword === password) {
             return generatePolicy(username, 'Allow', event.methodArn);

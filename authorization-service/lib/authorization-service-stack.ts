@@ -12,7 +12,7 @@ export class AuthorizationServiceStack extends cdk.Stack {
     const basicAuthorizer = new lambda.Function(this, 'BasicAuthorizer', {
       runtime: lambda.Runtime.NODEJS_16_X,
       handler: 'basicAuthorizer.handler',
-      code: lambda.Code.fromAsset(path.join(__dirname, '../dist/lambdas')),
+      code: lambda.Code.fromAsset(path.join(__dirname, '../lambdas')),
       environment: {
         parnasmi: process.env.parnasmi!,
       },

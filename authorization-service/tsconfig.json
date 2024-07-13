@@ -6,7 +6,6 @@
       "es2020",
       "dom"
     ],
-    "outDir": "dist",
     "declaration": true,
     "strict": true,
     "noImplicitAny": true,
