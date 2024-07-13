@@ -1,12 +1,9 @@
 import { APIGatewayAuthorizerResult, APIGatewayTokenAuthorizerEvent, PolicyDocument } from 'aws-lambda';
 import * as dotenv from 'dotenv';
+import { HTTP_RESPONSE } from '../types/types';
 
 dotenv.config();
 
-type HTTPRESPONSE = {
-    statusCode: number,
-    body: string,
-  }
 
 const generatePolicy = (principalId: string, effect: string, resource: string) => {
     const policyDocument:PolicyDocument = {
@@ -26,7 +23,7 @@ const generatePolicy = (principalId: string, effect: string, resource: string) =
     };
   };
 
-export const handler = async (event: APIGatewayTokenAuthorizerEvent): Promise<APIGatewayAuthorizerResult | HTTPRESPONSE > => {
+export const handler = async (event: APIGatewayTokenAuthorizerEvent): Promise<APIGatewayAuthorizerResult | HTTP_RESPONSE > => {
     console.log('handler Event: ', event);
     if (!event.authorizationToken) {
         return {
@@ -41,10 +38,7 @@ export const handler = async (event: APIGatewayTokenAuthorizerEvent): Promise<AP
         const [username, password] = decodedToken.split(':');
       
         const expectedPassword = process.env[username.trim()];
-        // const expectedPassword = 'TEST_PASSWORD';
 
-        console.log('expectedPassword',{expectedPassword, username, password, envVars:process.env});
-  
         if (expectedPassword === password) {
             return generatePolicy(username, 'Allow', event.methodArn);
         }
